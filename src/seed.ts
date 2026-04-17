@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import User from './models/User.js';
 import Offer from './models/Offer.js';
+import Application from './models/Application.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ const seedDatabase = async () => {
     console.log("🧹 Cleaning database...");
     await User.deleteMany({});
     await Offer.deleteMany({});
+    await Application.deleteMany({});
 
     // 2. Hash default password
     const hashedPassword = await bcrypt.hash('password123', 10);
@@ -194,8 +196,39 @@ const seedDatabase = async () => {
         deadline: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000)
       }
     ]);
+    const createdOffers = await Offer.find();
 
     console.log("✅ Offers created.");
+
+    // 5. Create Applications
+    console.log("📝 Creating sample applications...");
+    const student1 = await User.findOne({ email: 'yassine.labidi@esprit.tn' });
+    const student2 = await User.findOne({ email: 'amira.guesmi@insat.tn' });
+
+    if (student1 && student2) {
+      await Application.create([
+        {
+          offer_id: createdOffers[0]._id, // Développeur Frontend
+          student_id: student1._id,
+          status: 'accepted',
+          cover_letter: 'Je suis très motivé par ce projet SaaS.'
+        },
+        {
+          offer_id: createdOffers[1]._id, // Fullstack Developer
+          student_id: student1._id,
+          status: 'pending',
+          cover_letter: 'Voici mon CV pour le poste Fullstack.'
+        },
+        {
+          offer_id: createdOffers[6]._id, // Data Scientist
+          student_id: student2._id,
+          status: 'rejected',
+          cover_letter: 'Passionnée par la Data Science.'
+        }
+      ]);
+    }
+
+    console.log("✅ Applications created.");
     console.log("\n🚀 Database seeding completed successfully!");
     console.log("\n--- Accounts created (Password: password123) ---");
     console.log("Admin:    admin@stageconnect.tn");
