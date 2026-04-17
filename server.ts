@@ -5,7 +5,7 @@ import authRoutes from './src/routes/authRoutes.js';
 import offerRoutes from './src/routes/offerRoutes.js';
 import applicationRoutes from './src/routes/applicationRoutes.js';
 import adminRoutes from './src/routes/adminRoutes.js';
-import './src/db.js'; // Initialise la base SQLite au démarrage
+import './src/db.js'; // Initialise la base MongoDB au démarrage
 
 dotenv.config();
 const app = express();
@@ -19,7 +19,7 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Route de santé
-app.get('/api/health', (_req, res) => res.json({ status: 'ok', db: 'SQLite' }));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', db: 'MongoDB' }));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (SQLite)`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (MongoDB)`));

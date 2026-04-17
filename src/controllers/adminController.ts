@@ -1,9 +1,11 @@
-import db from '../db.js';
+import User from '../models/User.js';
+import Offer from '../models/Offer.js';
+import Application from '../models/Application.js';
 import bcrypt from 'bcryptjs';
 
 export const getAllUsers = async (req: any, res: any) => {
     try {
-        const users = db.prepare('SELECT id, name, email, role, company_name, created_at FROM users ORDER BY created_at DESC').all();
+        const users = await User.find().select('-password').sort({ createdAt: -1 });
         res.json(users);
     } catch (error: any) {
         console.error("Get all users error:", error);
@@ -19,20 +21,22 @@ export const createUser = async (req: any, res: any) => {
             return res.status(400).json({ error: "Nom, email et mot de passe requis." });
         }
 
-        const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+        const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ error: "Cet email est déjà utilisé." });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        const stmt = db.prepare(`
-            INSERT INTO users (name, email, password, role, company_name)
-            VALUES (?, ?, ?, ?, ?)
-        `);
-        const result = stmt.run(name, email, hashedPassword, role || 'student', company_name || null);
-        
-        res.status(201).json({ message: "Utilisateur créé", userId: result.lastInsertRowid });
+        const newUser = new User({
+            name, email,
+            password: hashedPassword,
+            role: role || 'student',
+            company_name: role === 'company' ? (company_name || '') : undefined
+        });
+
+        await newUser.save();
+        res.status(201).json({ message: "Utilisateur créé", userId: newUser._id });
     } catch (error: any) {
         console.error("Create user error:", error);
         res.status(500).json({ error: "Erreur serveur: " + error.message });
@@ -44,16 +48,14 @@ export const updateUser = async (req: any, res: any) => {
         const { id } = req.params;
         const { name, email, role, company_name } = req.body;
 
-        const user = db.prepare('SELECT id FROM users WHERE id = ?').get(id);
+        const user = await User.findById(id);
         if (!user) return res.status(404).json({ error: "Utilisateur introuvable." });
 
-        db.prepare(`
-            UPDATE users 
-            SET name = ?, email = ?, role = ?, company_name = ?, updated_at = datetime('now')
-            WHERE id = ?
-        `).run(name, email, role, company_name || null, id);
+        const updated = await User.findByIdAndUpdate(id, {
+            name, email, role, company_name
+        }, { new: true });
 
-        res.json({ message: "Utilisateur mis à jour avec succès." });
+        res.json({ message: "Utilisateur mis à jour avec succès.", user: updated });
     } catch (error: any) {
         console.error("Update user error:", error);
         res.status(500).json({ error: "Erreur serveur: " + error.message });
@@ -64,8 +66,11 @@ export const deleteUser = async (req: any, res: any) => {
     try {
         const { id } = req.params;
         
-        // Supprimer en cascade logiquement: pour l'instant direct suppression
-        db.prepare('DELETE FROM users WHERE id = ?').run(id);
+        // Supprimer l'utilisateur
+        await User.findByIdAndDelete(id);
+        
+        // Optionnel: Supprimer les dépendances (offres de l'entreprise, candidatures de l'étudiant)
+        // Pour l'instant on garde simple comme dans l'original
         
         res.json({ message: "Utilisateur supprimé avec succès." });
     } catch (error: any) {
@@ -76,33 +81,37 @@ export const deleteUser = async (req: any, res: any) => {
 
 export const getPlatformStats = async (req: any, res: any) => {
     try {
-        const usersCount: any = db.prepare('SELECT COUNT(*) as count FROM users').get();
-        const studentsCount: any = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = "student"').get();
-        const companiesCount: any = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = "company"').get();
-        
-        const offersCount: any = db.prepare('SELECT COUNT(*) as count FROM offers').get();
-        const activeOffersCount: any = db.prepare('SELECT COUNT(*) as count FROM offers WHERE status = "active"').get();
-        
-        const applicationsCount: any = db.prepare('SELECT COUNT(*) as count FROM applications').get();
-        const pendingApplications: any = db.prepare('SELECT COUNT(*) as count FROM applications WHERE status = "pending"').get();
-        const acceptedApplications: any = db.prepare('SELECT COUNT(*) as count FROM applications WHERE status = "accepted"').get();
-        const rejectedApplications: any = db.prepare('SELECT COUNT(*) as count FROM applications WHERE status = "rejected"').get();
+        const [
+            totalUsers, studentsCount, companiesCount,
+            totalOffers, activeOffersCount,
+            totalApplications, pendingApplications, acceptedApplications, rejectedApplications
+        ] = await Promise.all([
+            User.countDocuments(),
+            User.countDocuments({ role: 'student' }),
+            User.countDocuments({ role: 'company' }),
+            Offer.countDocuments(),
+            Offer.countDocuments({ status: 'active' }),
+            Application.countDocuments(),
+            Application.countDocuments({ status: 'pending' }),
+            Application.countDocuments({ status: 'accepted' }),
+            Application.countDocuments({ status: 'rejected' })
+        ]);
 
         res.json({
             users: {
-                total: usersCount.count,
-                students: studentsCount.count,
-                companies: companiesCount.count
+                total: totalUsers,
+                students: studentsCount,
+                companies: companiesCount
             },
             offers: {
-                total: offersCount.count,
-                active: activeOffersCount.count
+                total: totalOffers,
+                active: activeOffersCount
             },
             applications: {
-                total: applicationsCount.count,
-                pending: pendingApplications.count,
-                accepted: acceptedApplications.count,
-                rejected: rejectedApplications.count
+                total: totalApplications,
+                pending: pendingApplications,
+                accepted: acceptedApplications,
+                rejected: rejectedApplications
             }
         });
     } catch (error: any) {
