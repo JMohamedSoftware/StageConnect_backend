@@ -67,4 +67,15 @@ router.get('/profile', authenticate, async (req: any, res: any) => {
   }
 });
 
+// Route pour mettre à jour le profil (téléphone, etc.)
+router.patch('/profile', authenticate, async (req: any, res: any) => {
+  try {
+    const { phone } = req.body;
+    await User.findByIdAndUpdate(req.user.id, { phone });
+    res.json({ message: 'Profil mis à jour avec succès.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la mise à jour.' });
+  }
+});
+
 export default router;
