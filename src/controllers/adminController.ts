@@ -65,13 +65,7 @@ export const updateUser = async (req: any, res: any) => {
 export const deleteUser = async (req: any, res: any) => {
     try {
         const { id } = req.params;
-        
-        // Supprimer l'utilisateur
         await User.findByIdAndDelete(id);
-        
-        // Optionnel: Supprimer les dépendances (offres de l'entreprise, candidatures de l'étudiant)
-        // Pour l'instant on garde simple comme dans l'original
-        
         res.json({ message: "Utilisateur supprimé avec succès." });
     } catch (error: any) {
         console.error("Delete user error:", error);
@@ -145,6 +139,29 @@ export const getPlatformStats = async (req: any, res: any) => {
         });
     } catch (error: any) {
         console.error("Get platform stats error:", error);
+        res.status(500).json({ error: "Erreur serveur: " + error.message });
+    }
+};
+
+export const getAllApplications = async (req: any, res: any) => {
+    try {
+        const applications = await Application.find()
+            .populate('studentId', 'name email')
+            .populate('offerId', 'title')
+            .sort({ createdAt: -1 });
+
+        const formatted = applications.map((a: any) => ({
+            id: a._id,
+            name: a.studentId?.name || "Inconnu",
+            student_email: a.studentId?.email,
+            offer_title: a.offerId?.title || "Offre supprimée",
+            status: a.status,
+            applied_at: a.createdAt
+        }));
+
+        res.json(formatted);
+    } catch (error: any) {
+        console.error("Get all applications error:", error);
         res.status(500).json({ error: "Erreur serveur: " + error.message });
     }
 };
