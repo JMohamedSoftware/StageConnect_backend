@@ -55,6 +55,17 @@ db.exec(`
     created_at    TEXT DEFAULT (datetime('now')),
     updated_at    TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS applications (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    offer_id      INTEGER NOT NULL REFERENCES offers(id),
+    student_id    INTEGER NOT NULL REFERENCES users(id),
+    cover_letter  TEXT,
+    status        TEXT DEFAULT 'pending',
+    created_at    TEXT DEFAULT (datetime('now')),
+    updated_at    TEXT DEFAULT (datetime('now')),
+    UNIQUE(offer_id, student_id)
+  );
 `);
 
 console.log("✅ SQLite DB ready at", DB_PATH);
