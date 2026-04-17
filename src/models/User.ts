@@ -20,7 +20,8 @@ const userSchema = new mongoose.Schema({
     address: { type: String },
     city: { type: String },
     zip: { type: String },
-    country: { type: String }
+    country: { type: String },
+    is_approved: { type: Boolean, default: true }
 }, { timestamps: true });
 
 export default mongoose.model('User', userSchema);

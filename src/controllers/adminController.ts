@@ -79,16 +79,44 @@ export const deleteUser = async (req: any, res: any) => {
     }
 };
 
+export const toggleUserApproval = async (req: any, res: any) => {
+    try {
+        const { id } = req.params;
+        const { is_approved } = req.body;
+
+        const user = await User.findById(id);
+        if (!user) return res.status(404).json({ error: "Utilisateur introuvable." });
+
+        user.is_approved = is_approved;
+        await user.save();
+
+        res.json({ message: `Compte ${is_approved ? 'approuvé' : 'bloqué'} avec succès.`, user });
+    } catch (error: any) {
+        console.error("Toggle approval error:", error);
+        res.status(500).json({ error: "Erreur serveur: " + error.message });
+    }
+};
+
+export const getPendingCompanies = async (req: any, res: any) => {
+    try {
+        const companies = await User.find({ role: 'company', is_approved: false }).sort({ createdAt: -1 });
+        res.json(companies);
+    } catch (error: any) {
+        res.status(500).json({ error: "Erreur serveur: " + error.message });
+    }
+};
+
 export const getPlatformStats = async (req: any, res: any) => {
     try {
         const [
-            totalUsers, studentsCount, companiesCount,
+            totalUsers, studentsCount, companiesCount, pendingCompaniesCount,
             totalOffers, activeOffersCount,
             totalApplications, pendingApplications, acceptedApplications, rejectedApplications
         ] = await Promise.all([
             User.countDocuments(),
             User.countDocuments({ role: 'student' }),
             User.countDocuments({ role: 'company' }),
+            User.countDocuments({ role: 'company', is_approved: false }),
             Offer.countDocuments(),
             Offer.countDocuments({ status: 'active' }),
             Application.countDocuments(),
@@ -101,7 +129,8 @@ export const getPlatformStats = async (req: any, res: any) => {
             users: {
                 total: totalUsers,
                 students: studentsCount,
-                companies: companiesCount
+                companies: companiesCount,
+                pending_companies: pendingCompaniesCount
             },
             offers: {
                 total: totalOffers,

@@ -15,6 +15,18 @@ export const applyToOffer = async (req: any, res: any) => {
             return res.status(404).json({ error: "Offre introuvable." });
         }
 
+        // Vérification du profil étudiant (CV et téléphone obligatoires)
+        const student = req.user;
+        if (!student.cv_url || !student.phone) {
+            return res.status(400).json({ 
+                error: "Désolé, vous devez compléter votre profil (CV et numéro de téléphone) avant de pouvoir postuler.",
+                missingFields: {
+                    cv_url: !student.cv_url,
+                    phone: !student.phone
+                }
+            });
+        }
+
         try {
             const newApplication = new Application({
                 offer_id: offerId,

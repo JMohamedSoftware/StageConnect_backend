@@ -21,7 +21,8 @@ export const register = async (req: any, res: any) => {
             name, email,
             password: hashedPassword,
             role,
-            company_name: role === 'company' ? (company_name || '') : undefined
+            company_name: role === 'company' ? (company_name || '') : undefined,
+            is_approved: role !== 'company' // Students and admins are approved by default
         });
 
         await newUser.save();
@@ -42,6 +43,11 @@ export const login = async (req: any, res: any) => {
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(401).json({ error: "Identifiants invalides." });
+
+        // Vérification de l'approbation pour les entreprises
+        if (user.role === 'company' && !(user as any).is_approved) {
+            return res.status(403).json({ error: "Votre compte est en attente de validation par un administrateur." });
+        }
 
         const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
         res.json({

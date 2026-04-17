@@ -4,7 +4,9 @@ import {
     createUser, 
     updateUser, 
     deleteUser, 
-    getPlatformStats 
+    getPlatformStats,
+    getPendingCompanies,
+    toggleUserApproval
 } from '../controllers/adminController.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { isAdmin } from '../middlewares/roleMiddleware.js';
@@ -22,5 +24,9 @@ router.delete('/users/:id', deleteUser);
 
 // Route Statistiques (Stats)
 router.get('/stats', getPlatformStats);
+
+// Gestion des entreprises
+router.get('/pending-companies', getPendingCompanies);
+router.patch('/approve/:id', toggleUserApproval);
 
 export default router;
