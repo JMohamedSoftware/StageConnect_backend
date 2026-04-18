@@ -1,5 +1,6 @@
 import Application from '../models/Application.js';
 import Offer from '../models/Offer.js';
+import User from '../models/User.js';
 
 export const applyToOffer = async (req: any, res: any) => {
     try {
@@ -19,13 +20,20 @@ export const applyToOffer = async (req: any, res: any) => {
             return res.status(404).json({ error: "Offre introuvable." });
         }
 
-        // Vérification du profil étudiant (CV et téléphone obligatoires)
+        // Si un nouveau CV est envoyé, on met à jour le profil de l'étudiant
         const student = req.user;
-        if (!student.cv_url || !student.phone) {
+        let cvUrl = student.cv_url;
+        if (req.file) {
+            cvUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            // Optionnel: Mettre à jour le profil permanent de l'étudiant
+            await User.findByIdAndUpdate(req.user.id, { cv_url: cvUrl });
+        }
+
+        if (!cvUrl || !student.phone) {
             return res.status(400).json({ 
                 error: "Désolé, vous devez compléter votre profil (CV et numéro de téléphone) avant de pouvoir postuler.",
                 missingFields: {
-                    cv_url: !student.cv_url,
+                    cv_url: !cvUrl,
                     phone: !student.phone
                 }
             });
