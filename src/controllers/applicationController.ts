@@ -3,9 +3,13 @@ import Offer from '../models/Offer.js';
 
 export const applyToOffer = async (req: any, res: any) => {
     try {
-        const { offerId, coverLetter } = req.body;
+        console.log("Candidature reçue - body:", req.body);
+        console.log("Candidature reçue - file:", req.file);
+
+        const offerId = req.body.offer_id || req.body.offerId || req.body.id;
+        const coverLetter = req.body.cover_letter || req.body.coverLetter || req.body.motivation;
         
-        if (!offerId) {
+        if (!offerId || offerId === 'undefined') {
             return res.status(400).json({ error: "L'ID de l'offre est requis." });
         }
 
